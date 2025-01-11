@@ -12,6 +12,7 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
+import meteordevelopment.meteorclient.utils.render.RenderUtils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.orbit.EventHandler;
@@ -61,7 +62,8 @@ public class MobGearESP extends Module {
         Items.ENDER_CHEST,
         Items.TOTEM_OF_UNDYING,
         Items.EXPERIENCE_BOTTLE,
-        Items.SHULKER_BOX
+        Items.SHULKER_BOX,
+        Items.CHORUS_FRUIT
     ));
 
     public MobGearESP() {
@@ -101,7 +103,7 @@ public class MobGearESP extends Module {
     );
 
     public final Setting<Boolean> enchants = sgGeneral.add(new BoolSetting.Builder()
-        .name("item-armor-enchants")
+        .name("enforce-item-enchants")
         .description("Requires that armor and tools must be enchanted for module to detect.")
         .defaultValue(true)
         .build()
@@ -122,6 +124,20 @@ public class MobGearESP extends Module {
         .build()
     );
 
+    private final Setting<Boolean> itemsInChat = sgGeneral.add(new BoolSetting.Builder()
+        .name("Display found items in chat")
+        .description("Display items detected by mod in chat")
+        .defaultValue(true)
+        .build()
+    );
+
+    private final Setting<Boolean> tracers = sgGeneral.add(new BoolSetting.Builder()
+        .name("Tracers")
+        .description("Add tracers to mobs detected")
+        .defaultValue(true)
+        .build()
+    );
+
     public final Setting<Boolean> distance = sgColors.add(new BoolSetting.Builder()
         .name("distance-colors")
         .description("Changes the color of tracers depending on distance.")
@@ -131,7 +147,7 @@ public class MobGearESP extends Module {
 
     private final Setting<SettingColor> monstersColor = sgColors.add(new ColorSetting.Builder()
         .name("monsters-color")
-        .description("The mob's color.")
+        .description("The mob's bounding box and tracer color.")
         .defaultValue(new SettingColor(255, 25, 25, 255))
         .visible(() -> !distance.get())
         .build()
@@ -148,14 +164,23 @@ public class MobGearESP extends Module {
     private void onRender3D(Render3DEvent event) {
         count = 0;
         for (Entity entity : mc.world.getEntities()) {
-            if (shouldSkip(entity)) continue;
+            if (!(entity instanceof LivingEntity livingEntity)) continue;
+            if (shouldSkip(livingEntity)) continue;
             if (!scannedEntities.contains(entity)) { // send chat msg if we haven't scanned mob before
-                String message = entity.getType().getName().getString() + " found most likely wearing player gear";
-                if (coordsInChat.get()) message += " at " + String.valueOf(entity.getBlockX()) + ", " + String.valueOf(entity.getBlockY()) + ", " + String.valueOf(entity.getBlockZ()) + "!";
-                ChatUtils.sendMsg(Text.of(message));
+                StringBuilder message = new StringBuilder(entity.getType().getName().getString() + " found most likely wearing player gear");
+                if (coordsInChat.get()) message.append(" at ").append(entity.getBlockX()).append(", ").append(entity.getBlockY()).append(", ").append(entity.getBlockZ());
+                if (itemsInChat.get()) {
+                    ArrayList<Item> playerItems = getPlayerItems(livingEntity);
+                    message.append(" holding ");
+                    for (Item item : playerItems) {
+                        message.append(item.getTranslationKey().split("\\.")[2]).append(" ");
+                    }
+                }
+                ChatUtils.sendMsg(Text.of(message.toString()));
             }
             scannedEntities.add(entity);
             drawBoundingBox(event, entity);
+            if (tracers.get()) drawTracer(event, entity);
             count++;
         }
     }
@@ -183,28 +208,41 @@ public class MobGearESP extends Module {
         event.renderer.box(x + box.minX, y + box.minY, z + box.minZ, x + box.maxX, y + box.maxY, z + box.maxZ, sideColor, lineColor, shapeMode.get(), 0);
     }
 
+    private void drawTracer(Render3DEvent event, Entity entity) {
+        if (mc.options.hudHidden) return;
+        Color color = monstersColor.get();
+        double x = entity.prevX + (entity.getX() - entity.prevX) * event.tickDelta;
+        double y = entity.prevY + (entity.getY() - entity.prevY) * event.tickDelta;
+        double z = entity.prevZ + (entity.getZ() - entity.prevZ) * event.tickDelta;
+        double height = entity.getBoundingBox().maxY - entity.getBoundingBox().minY;
+        y += height / 2; // target the body of entity
+        event.renderer.line(RenderUtils.center.x, RenderUtils.center.y, RenderUtils.center.z, x, y, z, color);
+    }
+
     // Utils
 
-    public boolean shouldSkip(Entity entity) {
-        if (!(entity instanceof LivingEntity livingEntity)) return true;
-        if (entity.isPlayer()) return true;
-        boolean skip = true;
-        // check equipped armor
+    // checks a mob for any player items and returns a list of them
+    private ArrayList<Item> getPlayerItems(LivingEntity livingEntity) {
+        ArrayList<Item> playerItems = new ArrayList<>();
         for (ItemStack item  : livingEntity.getArmorItems()) {
             // if we require enchants, the item is enchantable, and it has no enchants
             if (enchants.get() && item.isEnchantable() && item.getEnchantments().isEmpty()) continue;
-            if (items.get().contains(item.getItem())) skip = false;
+            if (items.get().contains(item.getItem())) playerItems.add(item.getItem());
 
         }
         // check held items
         for (ItemStack item : livingEntity.getHandItems()) {
             if (enchants.get() && item.isEnchantable() && item.getEnchantments().isEmpty()) continue;
-            if (items.get().contains(item.getItem())) skip = false;
+            if (items.get().contains(item.getItem())) playerItems.add(item.getItem());
         }
+        return playerItems;
+    }
 
+    public boolean shouldSkip(LivingEntity entity) {
+        if (entity.isPlayer()) return true;
+        ArrayList<Item> playerItems = getPlayerItems(entity);
         if (entity == mc.cameraEntity && mc.options.getPerspective().isFirstPerson()) return true;
-
-        return skip || !EntityUtils.isInRenderDistance(entity);
+        return playerItems.isEmpty() || !EntityUtils.isInRenderDistance(entity);
     }
 
     public Color getColor(Entity entity) {
