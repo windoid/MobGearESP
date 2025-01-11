@@ -173,8 +173,9 @@ public class MobGearESP extends Module {
                     ArrayList<Item> playerItems = getPlayerItems(livingEntity);
                     message.append(" holding ");
                     for (Item item : playerItems) {
-                        message.append(item.getTranslationKey().split("\\.")[2]).append(" ");
+                        message.append(item.getTranslationKey().split("\\.")[2]).append(", ");
                     }
+                    message.setLength(message.length() - 2); // chop off ", " from end of chat message
                 }
                 ChatUtils.sendMsg(Text.of(message.toString()));
             }
