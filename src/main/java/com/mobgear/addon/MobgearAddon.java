@@ -16,7 +16,7 @@ public class MobgearAddon extends MeteorAddon {
 
     @Override
     public void onInitialize() {
-        LOG.info("Initializing Meteor Addon Template");
+        LOG.info("Initializing Mobgear Addon");
 
         // Modules
         Modules.get().add(new MobGearESP());
