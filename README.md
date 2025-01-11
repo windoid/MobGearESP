@@ -8,4 +8,10 @@ Download the latest release and stick it in your mods folder! Have Meteor Client
 
 ### Building
 
-Feel free to build it yourself: `./gradlew build`
+I encourage you to build the project yourself: `./gradlew build`
+
+### Contact
+
+Suggestions or problems? DM me on discord at `keaton___`
+
+
