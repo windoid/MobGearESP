@@ -1,25 +1,22 @@
 {
   "schemaVersion": 1,
-  "id": "addon-template",
+  "id": "mobgear-addon",
   "version": "${version}",
-  "name": "Addon Template",
-  "description": "An addon template for Meteor Client addons.",
+  "name": "Mobgear Addon",
+  "description": "A module to detect if mobs are wearing player gear",
   "authors": [
-    "seasnail"
+    "windoid"
   ],
   "contact": {
-    "repo": "https://github.com/MeteorDevelopment/meteor-addon-template"
+    "repo": "https://github.com/windoid/MobGearESP"
   },
   "icon": "assets/template/icon.png",
   "environment": "client",
   "entrypoints": {
     "meteor": [
-      "com.example.addon.AddonTemplate"
+      "com.mobgear.addon.MobgearAddon"
     ]
   },
-  "mixins": [
-    "addon-template.mixins.json"
-  ],
   "custom": {
     "meteor-client:color": "225,25,25"
   },
