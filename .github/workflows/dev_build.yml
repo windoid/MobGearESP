@@ -1,5 +1,7 @@
 name: Publish Development Build
-on: push
+on:
+    push:
+    workflow_dispatch:
 
 jobs:
     build:
