@@ -1,5 +1,6 @@
 package com.mobgear.addon;
 
+import com.mobgear.addon.modules.ItemESP;
 import com.mobgear.addon.modules.MobGearESP;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -20,6 +21,7 @@ public class MobgearAddon extends MeteorAddon {
 
         // Modules
         Modules.get().add(new MobGearESP());
+        Modules.get().add(new ItemESP());
     }
 
     @Override
